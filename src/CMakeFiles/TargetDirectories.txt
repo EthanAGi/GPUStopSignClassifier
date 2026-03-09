@@ -1,3 +1,0 @@
-C:/SCHOOOL WORK/CSCD445Final/src/CMakeFiles/project.dir
-C:/SCHOOOL WORK/CSCD445Final/src/CMakeFiles/edit_cache.dir
-C:/SCHOOOL WORK/CSCD445Final/src/CMakeFiles/rebuild_cache.dir

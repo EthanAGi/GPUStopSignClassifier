@@ -1,3 +1,0 @@
-C:/Users/ethgu/Documents/personalSite/personalSite/CSCD445Final/build/CMakeFiles/project.dir
-C:/Users/ethgu/Documents/personalSite/personalSite/CSCD445Final/build/CMakeFiles/ALL_BUILD.dir
-C:/Users/ethgu/Documents/personalSite/personalSite/CSCD445Final/build/CMakeFiles/ZERO_CHECK.dir
