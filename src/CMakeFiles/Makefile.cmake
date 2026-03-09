@@ -46,11 +46,10 @@ set(CMAKE_MAKEFILE_DEPENDS
   "CMakeFiles/4.2.3/CMakeRCCompiler.cmake"
   "CMakeFiles/4.2.3/CMakeSystem.cmake"
   "CMakeLists.txt"
-  "C:/opencv/build/x64/vc16/lib/OpenCVConfig-version.cmake"
-  "C:/opencv/build/x64/vc16/lib/OpenCVConfig.cmake"
-  "C:/opencv/build/x64/vc16/lib/OpenCVModules-debug.cmake"
-  "C:/opencv/build/x64/vc16/lib/OpenCVModules-release.cmake"
-  "C:/opencv/build/x64/vc16/lib/OpenCVModules.cmake"
+  "C:/msys64/ucrt64/lib/cmake/opencv4/OpenCVConfig-version.cmake"
+  "C:/msys64/ucrt64/lib/cmake/opencv4/OpenCVConfig.cmake"
+  "C:/msys64/ucrt64/lib/cmake/opencv4/OpenCVModules-release.cmake"
+  "C:/msys64/ucrt64/lib/cmake/opencv4/OpenCVModules.cmake"
   )
 
 # The corresponding makefile is:
@@ -66,5 +65,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/DisplayImage.dir/DependInfo.cmake"
+  "CMakeFiles/project.dir/DependInfo.cmake"
   )

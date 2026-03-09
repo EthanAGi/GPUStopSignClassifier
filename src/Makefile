@@ -116,41 +116,41 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named DisplayImage
+# Target rules for targets named project
 
 # Build rule for target.
-DisplayImage: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 DisplayImage
-.PHONY : DisplayImage
+project: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 project
+.PHONY : project
 
 # fast build rule for target.
-DisplayImage/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\DisplayImage.dir\build.make CMakeFiles/DisplayImage.dir/build
-.PHONY : DisplayImage/fast
+project/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\project.dir\build.make CMakeFiles/project.dir/build
+.PHONY : project/fast
 
-DisplayImage.obj: DisplayImage.cpp.obj
-.PHONY : DisplayImage.obj
+main.obj: main.cpp.obj
+.PHONY : main.obj
 
 # target to build an object file
-DisplayImage.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\DisplayImage.dir\build.make CMakeFiles/DisplayImage.dir/DisplayImage.cpp.obj
-.PHONY : DisplayImage.cpp.obj
+main.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\project.dir\build.make CMakeFiles/project.dir/main.cpp.obj
+.PHONY : main.cpp.obj
 
-DisplayImage.i: DisplayImage.cpp.i
-.PHONY : DisplayImage.i
+main.i: main.cpp.i
+.PHONY : main.i
 
 # target to preprocess a source file
-DisplayImage.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\DisplayImage.dir\build.make CMakeFiles/DisplayImage.dir/DisplayImage.cpp.i
-.PHONY : DisplayImage.cpp.i
+main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\project.dir\build.make CMakeFiles/project.dir/main.cpp.i
+.PHONY : main.cpp.i
 
-DisplayImage.s: DisplayImage.cpp.s
-.PHONY : DisplayImage.s
+main.s: main.cpp.s
+.PHONY : main.s
 
 # target to generate assembly for a file
-DisplayImage.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\DisplayImage.dir\build.make CMakeFiles/DisplayImage.dir/DisplayImage.cpp.s
-.PHONY : DisplayImage.cpp.s
+main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\project.dir\build.make CMakeFiles/project.dir/main.cpp.s
+.PHONY : main.cpp.s
 
 # Help Target
 help:
@@ -160,10 +160,10 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
-	@echo ... DisplayImage
-	@echo ... DisplayImage.obj
-	@echo ... DisplayImage.i
-	@echo ... DisplayImage.s
+	@echo ... project
+	@echo ... main.obj
+	@echo ... main.i
+	@echo ... main.s
 .PHONY : help
 
 
