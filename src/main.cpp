@@ -5,6 +5,9 @@ using namespace cv;
 
 int main(int argc, char** argv )
 {
+
+    printf("Program running\n");
+
     if ( argc != 2 )
     {
         printf("usage: DisplayImage.out <Image_Path>\n");
