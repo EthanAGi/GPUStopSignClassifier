@@ -25,6 +25,7 @@ int main(int argc, char** argv ) {
     // Load the image using stb_image
     int width, height, channels;
 
+    //Represented in a 1D array of unsigned chars in the format of [ R, G, B, R, G, B, R, G, B, ... ]
     unsigned char *img = stbi_load(input_image_path, &width, &height, &channels, 3);
 
     if (!img) {
@@ -34,7 +35,15 @@ int main(int argc, char** argv ) {
 
     printf("Width: %d Height: %d\n", width, height);
 
-    // Access RGB pixels
+    /* Access RGB pixels
+    
+        int index = (y * width + x) * 3;
+        unsigned char r = img[index + 0];
+        unsigned char g = img[index + 1];
+        unsigned char b = img[index + 2];
+    
+        This is the mapping required because the output is a 1D array of unsigned chars in the repeating order of {R, G, B}
+    */
     for (int y = 0; y < height; y++) {
 
         for (int x = 0; x < width; x++) {
