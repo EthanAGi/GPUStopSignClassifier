@@ -74,6 +74,7 @@ __device__ void rbgToHsv(unsigned char r, unsigned char g, unsigned char b, floa
     }
     else if (norm_r == max_value) { 
         *h = ((norm_g - norm_b) / (max_value - min_value)) * 60;
+        if (*h < 0.0f) *h += 360.0f;  // wrap negative values
     }
     else if (norm_g == max_value) {
         *h = ((norm_b - norm_r) / (max_value - min_value)) * 60;
@@ -146,19 +147,13 @@ __global__ void filterRed(float *input_img, unsigned char *output_img, int heigh
         float v = input_img[pixel_index + 2];
 
         // Check if the pixel is red based on hue, saturation, and value thresholds
-        if ((h >= 0 && h <= 10) || (h >= 350 && h <= 360)) {
+        bool isRedHue = (h >= 0.0f && h <= 10.0f) || (h >= 350.0f && h <= 360.0f);
 
-            if (s > 0.5f && v > 0.5f) {
-                output_img[pixel_index / 3] = 255; // Set to white
-            }
-            else {
-                output_img[pixel_index / 3] = 0; // Set to black
-            }
-            
-        }
-        else {
-            output_img[pixel_index / 3] = 0; // Set to black
-        }
+        // Adjust these thresholds based on whether your S/V are 0-1 or 0-255
+        bool isSaturated = s > 0.3f;   // if normalized; use s > 127 if 0-255
+        bool isBright    = v > 0.3f;   // if normalized; use v > 127 if 0-255
+
+        output_img[idy * width + idx] = (isRedHue && isSaturated && isBright) ? 255 : 0;
 
     }
 
