@@ -1,5 +1,3 @@
 {
-    "cmake.ignoreCMakeListsMissing": true,
-    "cmake.cmakePath": "C:\\Program Files\\CMake\\bin\\cmake.exe",
-    "C_Cpp.errorSquiggles": "disabled"
+        "C_Cpp.errorSquiggles": "disabled"
 }
