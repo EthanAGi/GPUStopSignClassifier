@@ -15,5 +15,5 @@ __device__ void rbgToHsv(unsigned char r, unsigned char g, unsigned char b, floa
 
 __global__ void rgbToHsvKernel(unsigned char *input_img, float *output_img, int height, int width);
 
-__global__ void filterRed(int *values, int *max, int *reg_maxes, int num_regions, int n);
+__global__ void filterRed(float *input_img, unsigned char *output_img, int height, int width);
 
