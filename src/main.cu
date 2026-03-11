@@ -61,24 +61,28 @@ int main(int argc, char** argv ) {
 
     cudaDeviceSynchronize();
 
+    unsigned char *device_output_pixels;
+    cudaMalloc(&device_output_pixels, width * height * sizeof(unsigned char)); // Each pixel has 3 components (R, G, B)
+
     //Launch filterRed kernel to filter out the red pixels in the image
-    filterRed<<<grid, block>>>(device_hsv_pixels, device_rgb_pixels, width, height);
+    filterRed<<<grid, block>>>(device_hsv_pixels, device_output_pixels, width, height);
 
     cudaDeviceSynchronize();
 
     // Copy result back to host and free device memory
-    float *red_pixels = (float*)malloc(floatByteSize);
-    cudaMemcpy(red_pixels, device_rgb_pixels, floatByteSize, cudaMemcpyDeviceToHost);
+    unsigned char *red_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char)); // Each pixel has 3 components (R, G, B)
+    cudaMemcpy(red_pixels, device_output_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
     now = currentTime();
     scost = now - then;
 
-    stbi_write_png("output.png", width, height, 3, red_pixels, width * 3 * sizeof(float));
+    stbi_write_png("output.png", width, height, 1, red_pixels, width); // Each pixel has 3 components (R, G, B)
     printf("Image written to output.png\n");
     printf("Time taken for filtering red pixels: %f seconds\n", scost);
 
     cudaFree(device_hsv_pixels);
     cudaFree(device_rgb_pixels);
+    cudaFree(device_output_pixels);
     free(red_pixels);
     free(img);
 
