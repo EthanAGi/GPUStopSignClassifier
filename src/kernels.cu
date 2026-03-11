@@ -8,20 +8,25 @@ __device__ float distance( int p1[], int p2[] )
 
 }
 
-__global__ void drawCircleKernel(unsigned char **pixels, int numRows, int numCols, int centerRow, int centerCol, float radius) {
+__global__ void drawCircleKernel(unsigned char *pixels, int numRows, int numCols,
+                                 int centerRow, int centerCol, float radius) {
 
     int row = threadIdx.y + blockIdx.y * blockDim.y;
     int col = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (row < numRows && col < numCols) {
-        int p[2] = {row, col};
-        int center[2] = {centerRow, centerCol};
-        float dist = distance(p, center);
-        if (fabs(dist - radius) <= 0.5) {
-            pixels[row][col] = 255; // Set pixel to white if it's on the circle
+        float dist = sqrtf((row - centerRow) * (row - centerRow) +
+                           (col - centerCol) * (col - centerCol));
+
+        if (fabsf(dist - radius) <= 0.5f) {
+            int pixel_index = (row * numCols + col) * 3;
+
+            // Draw red circle
+            pixels[pixel_index]     = 255; // Red
+            pixels[pixel_index + 1] = 0;   // Green
+            pixels[pixel_index + 2] = 0;   // Blue
         }
     }
-
 }
 
 __global__ void checkShape(int *values, int *max, int *reg_maxes, int num_regions, int n) {
