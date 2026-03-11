@@ -38,23 +38,6 @@ int main(int argc, char** argv ) {
 
     printf("Width: %d Height: %d\n", width, height);
 
-    //Print the RGB values of each pixel in the image
-    for (int y = 0; y < height; y++) {
-
-        for (int x = 0; x < width; x++) {
-
-            int index = (y * width + x) * 3;
-
-            unsigned char r = img[index + 0];
-            unsigned char g = img[index + 1];
-            unsigned char b = img[index + 2];
-
-            printf("(%d,%d,%d) ", r, g, b);
-        }
-        printf("\n");
-
-    }
-
     then = currentTime();
 
     unsigned char *device_rgb_pixels;
@@ -76,20 +59,27 @@ int main(int argc, char** argv ) {
     //Launch Kernel
     rgbToHsvKernel<<<grid, block>>>(device_rgb_pixels, device_hsv_pixels, width, height);
 
+    cudaDeviceSynchronize();
+
+    //Launch filterRed kernel to filter out the red pixels in the image
+    filterRed<<<grid, block>>>(device_hsv_pixels, device_rgb_pixels, width, height);
+
+    cudaDeviceSynchronize();
+
     // Copy result back to host and free device memory
-    float *hsv_pixels = (float*)malloc(floatByteSize);
-    cudaMemcpy(hsv_pixels, device_hsv_pixels, floatByteSize, cudaMemcpyDeviceToHost); 
+    float *red_pixels = (float*)malloc(floatByteSize);
+    cudaMemcpy(red_pixels, device_rgb_pixels, floatByteSize, cudaMemcpyDeviceToHost);
 
     now = currentTime();
     scost = now - then;
 
-    stbi_write_png("output.png", width, height, 3, hsv_pixels, width * 3 * sizeof(float));
+    stbi_write_png("output.png", width, height, 3, red_pixels, width * 3 * sizeof(float));
     printf("Image written to output.png\n");
-    printf("Time taken for RGB to HSV conversion: %f seconds\n", scost);
+    printf("Time taken for filtering red pixels: %f seconds\n", scost);
 
     cudaFree(device_hsv_pixels);
     cudaFree(device_rgb_pixels);
-    free(hsv_pixels);
+    free(red_pixels);
     free(img);
 
     return 0;

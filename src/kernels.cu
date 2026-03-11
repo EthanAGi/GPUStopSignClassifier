@@ -131,8 +131,9 @@ __global__ void rgbToHsvKernel(unsigned char *input_img, float *output_img, int 
  * If it is, then the output pixel will be set to white, otherwise it will be set to black.The output will be a binary image where the red pixels 
  * are white and the non-red pixels are black. The input is an hsv image, so the red pixels will be determined by checking if the hue value is within 
  * a certain range (e.g. 0-10 degrees or 350-360 degrees) and if the saturation and value are above certain thresholds.
+ * Each output hsv pixel will be converted back to rgb format and written to the output array as a binary image (white for red pixels, black for non-red pixels).
  */
-__global__ void filterRed(unsigned char *input_img, unsigned char *output_img, int height, int width) {
+__global__ void filterRed(float *input_img, unsigned char *output_img, int height, int width) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int idy = blockIdx.y * blockDim.y + threadIdx.y;
