@@ -48,7 +48,7 @@ __device__ void rbgToHsv(unsigned char r, unsigned char g, unsigned char b, floa
     *v = max_value;
 
     //Find min and (max - min) for future reference
-    float min_value = fminf(norm_r, fminf(norm_f, norm_b));
+    float min_value = fminf(norm_r, fminf(norm_g, norm_b));
 
     //Finding the Saturation - ((max - min) / max) OR 0 if the max is 0
     if (max_value == 0) {
@@ -72,28 +72,18 @@ __device__ void rbgToHsv(unsigned char r, unsigned char g, unsigned char b, floa
     if (max_value - min_value == 0) {
         *h = 0.0f;
     }
+    else if (norm_r == max_value) { 
+        *h = ((norm_g - norm_b) / (max_value - min_value)) * 60;
+    }
+    else if (norm_g == max_value) {
+        *h = ((norm_b - norm_r) / (max_value - min_value)) * 60;
+    }
+    else if (norm_b == max_value) {
+        *h = ((norm_r - norm_g) / (max_value - min_value)) * 60;
+    }
     else {
-
-        switch (max_value) {
-
-        case norm_r:
-            ((norm_g - norm_b) / (max_value - min_value)) * 60;
-            break;
-
-        case norm_g:
-            ((norm_b - norm_r) / (max_value - min_value)) * 60;
-            break;
-
-        case norm_b:
-            ((norm_r - norm_g) / (max_value - min_value)) * 60;
-            break;
-
-        default:
-            printf("Error in calculating rbgToHsv conversion");
-            return -1;
-
-        }
-
+        printf("Error in calculating rbgToHsv conversion");
+        return;
     }
     
     if (*h < 0.0f) {
@@ -108,6 +98,31 @@ __device__ void rbgToHsv(unsigned char r, unsigned char g, unsigned char b, floa
  *  array of floats representing the converted hsv array of the image.
  */
 __global__ void rgbToHsvKernel(unsigned char *input_img, float *output_img, int height, int width) {
+    
+    //Mapping each thread to a pixel in the image
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+    //If the thread is within the bounds of the image, perform the rbgToHsv conversion and write to the output array
+    if (idx < width && idy < height) {
+
+        //Finding the rbg values for the pixel
+        int pixel_index = (idy * width + idx) * 3; // Each pixel has 3 components (R, G, B)
+        unsigned char r = input_img[pixel_index];
+        unsigned char g = input_img[pixel_index + 1];
+        unsigned char b = input_img[pixel_index + 2];
+
+        //Perform the rbgToHsv conversion
+        float h, s, v;
+        rbgToHsv(r, g, b, &h, &s, &v);
+
+        //Write the hsv values to the output array
+        output_img[pixel_index] = h;
+        output_img[pixel_index + 1] = s;
+        output_img[pixel_index + 2] = v;
+
+    }
+
     return;
 }
 
