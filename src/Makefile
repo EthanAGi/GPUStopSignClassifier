@@ -4,7 +4,7 @@ project: main.o timing.o kernels.o
 main.o: main.cu
 	nvcc -arch=sm_86 -c main.cu
 
-kernels.o: kernels.cu
+kernels.o: kernels.cu kernels.h
 	nvcc -arch=sm_86 -c kernels.cu
 
 timing.o: timing.c timing.h
