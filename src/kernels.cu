@@ -126,11 +126,41 @@ __global__ void rgbToHsvKernel(unsigned char *input_img, float *output_img, int 
     return;
 }
 
-__global__ void filterRed(int *values, int *max, int *reg_maxes, int num_regions, int n) {
+/**
+ * A kernel that filters out the red pixels in an image. Each thread will map to a pixel and check if the red value is above a certain threshold. 
+ * If it is, then the output pixel will be set to white, otherwise it will be set to black.The output will be a binary image where the red pixels 
+ * are white and the non-red pixels are black. The input is an hsv image, so the red pixels will be determined by checking if the hue value is within 
+ * a certain range (e.g. 0-10 degrees or 350-360 degrees) and if the saturation and value are above certain thresholds.
+ */
+__global__ void filterRed(unsigned char *input_img, unsigned char *output_img, int height, int width) {
 
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (idx < width && idy < height) {
+
+        int pixel_index = (idy * width + idx) * 3; // Each pixel has 3 components (H, S, V)
+        float h = input_img[pixel_index];
+        float s = input_img[pixel_index + 1];
+        float v = input_img[pixel_index + 2];
+
+        // Check if the pixel is red based on hue, saturation, and value thresholds
+        if ((h >= 0 && h <= 10) || (h >= 350 && h <= 360)) {
+
+            if (s > 0.5f && v > 0.5f) {
+                output_img[pixel_index / 3] = 255; // Set to white
+            }
+            else {
+                output_img[pixel_index / 3] = 0; // Set to black
+            }
+            
+        }
+        else {
+            output_img[pixel_index / 3] = 0; // Set to black
+        }
+
+    }
 
     return;
 
 }
-
