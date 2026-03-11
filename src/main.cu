@@ -65,7 +65,7 @@ int main(int argc, char** argv ) {
     cudaMalloc(&device_output_pixels, width * height * sizeof(unsigned char)); // Each pixel has 3 components (R, G, B)
 
     //Launch filterRed kernel to filter out the red pixels in the image
-    filterRed<<<grid, block>>>(device_hsv_pixels, device_output_pixels, width, height);
+    filterRed<<<grid, block>>>(device_hsv_pixels, device_output_pixels, height, width);
 
     cudaDeviceSynchronize();
 
