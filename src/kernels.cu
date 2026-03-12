@@ -2,6 +2,16 @@
 #include <stdlib.h>
 #include <math.h>
 
+#define GAUSSIAN_KERNEL_SIZE 3
+
+__constant__ float gaussianKernel[GAUSSIAN_KERNEL_SIZE][GAUSSIAN_KERNEL_SIZE] = {
+    {1.0f, 2.0f, 1.0f},
+    {2.0f, 4.0f, 2.0f},
+    {1.0f, 2.0f, 1.0f}
+};
+
+#define GAUSSIAN_NORM 16.0f
+
 __device__ float distance( int p1[], int p2[] )
 {
     return sqrtf( (float)( (p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]) ) );
@@ -167,4 +177,48 @@ __global__ void filterRed(float *input_img, unsigned char *output_img, int heigh
 
     return;
 
+}
+
+/**
+ * A kernel that applies a Gaussian smoothing filter to an image. Each thread will map to a pixel and apply the Gaussian filter to the surrounding pixels.
+ * The output will be a smoothed version of the input image. The input and output images are in grayscale format. The 
+ * Gaussian filter will be applied to each color channel separately. The kernel will use a 3x3 Gaussian kernel for smoothing.
+ * The kernel will read the grayscale values of the surrounding pixels, apply the Gaussian weights, and write the smoothed values to the output image. 
+ * The borders of the image can be handled by either ignoring them or using a padding strategy (e.g. replicating the edge pixels).
+ */
+__global__ void gaussianSmoothKernel(unsigned char *input_img, unsigned char *output_img, int height, int width) {
+
+    // Mapping each thread to a pixel in the image
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // If the thread is within the bounds of the image
+    if (idx < width && idy < height) {
+
+        float sum = 0.0f;
+
+        // Apply the Gaussian kernel to the surrounding pixels
+        // Loop through the kernel in the y direction
+        for (int ky = -GAUSSIAN_KERNEL_SIZE / 2; ky <= GAUSSIAN_KERNEL_SIZE / 2; ky++) {
+
+            // Loop through the kernel in the x direction
+            for (int kx = -GAUSSIAN_KERNEL_SIZE / 2; kx <= GAUSSIAN_KERNEL_SIZE / 2; kx++) {
+
+                // Calculate the coordinates of the neighboring pixel, ensuring they are within image bounds
+                int neighbor_x = min(max(idx + kx, 0), width - 1);
+                int neighbor_y = min(max(idy + ky, 0), height - 1); 
+
+                // Calculate the index of the neighboring pixel and accumulate the weighted sum
+                int neighbor_index = neighbor_y * width + neighbor_x;
+                sum += input_img[neighbor_index] * gaussianKernel[ky + GAUSSIAN_KERNEL_SIZE / 2][kx + GAUSSIAN_KERNEL_SIZE / 2];
+
+            }
+
+        }
+
+        output_img[idy * width + idx] = (unsigned char)(sum / GAUSSIAN_NORM);
+
+    }
+
+    return;
 }

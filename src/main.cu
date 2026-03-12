@@ -57,12 +57,12 @@ int main(int argc, char** argv ) {
     dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
     //Launch Kernel
-    rgbToHsvKernel<<<grid, block>>>(device_rgb_pixels, device_hsv_pixels, width, height);
+    rgbToHsvKernel<<<grid, block>>>(device_rgb_pixels, device_hsv_pixels, height, width);
 
     cudaDeviceSynchronize();
 
     unsigned char *device_output_pixels;
-    cudaMalloc(&device_output_pixels, width * height * sizeof(unsigned char)); // Each pixel has 3 components (R, G, B)
+    cudaMalloc(&device_output_pixels, width * height * sizeof(unsigned char));
 
     //Launch filterRed kernel to filter out the red pixels in the image
     filterRed<<<grid, block>>>(device_hsv_pixels, device_output_pixels, height, width);
@@ -70,15 +70,28 @@ int main(int argc, char** argv ) {
     cudaDeviceSynchronize();
 
     // Copy result back to host and free device memory
-    unsigned char *red_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char)); // Each pixel has 3 components (R, G, B)
+    unsigned char *red_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char)); 
     cudaMemcpy(red_pixels, device_output_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+
+    // Allocate memory for smoothed pixels and apply Gaussian smoothing to the binary image of red pixels to reduce noise and create a smoother output.
+    unsigned char *smoothed_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char)); 
+    unsigned char *device_smoothed_pixels;
+    cudaMalloc(&device_smoothed_pixels, width * height * sizeof(unsigned char));
+
+    gaussianSmoothKernel<<<grid, block>>>(device_output_pixels, device_smoothed_pixels, height, width);
+
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(smoothed_pixels, device_smoothed_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
     now = currentTime();
     scost = now - then;
 
-    stbi_write_png("output.png", width, height, 1, red_pixels, width); // Each pixel has 3 components (R, G, B)
-    printf("Image written to output.png\n");
-    printf("Time taken for filtering red pixels: %f seconds\n", scost);
+    stbi_write_png("smoothed_image_output.png", width, height, 1, smoothed_pixels, width);
+    printf("Image written to smoothed_image_output.png\n");
+    printf("Time taken: %f seconds\n", scost);
 
     cudaFree(device_hsv_pixels);
     cudaFree(device_rgb_pixels);

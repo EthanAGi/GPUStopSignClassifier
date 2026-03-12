@@ -17,3 +17,5 @@ __global__ void rgbToHsvKernel(unsigned char *input_img, float *output_img, int 
 
 __global__ void filterRed(float *input_img, unsigned char *output_img, int height, int width);
 
+__global__ void gaussianSmoothKernel(unsigned char *input_img, unsigned char *output_img, int height, int width);
+
