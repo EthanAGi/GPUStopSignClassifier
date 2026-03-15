@@ -109,11 +109,11 @@ void filterRedCPU(float *input_img, unsigned char *output_img, int height, int w
             float v = input_img[pixel_index + 2];
             // Read HSV of current panel.
 
-            int isRedHue = ((h >= 0.0f && h <= 10.0f) || (h >= 350.0f && h <= 360.0f));
+            int isRedHue = ((h >= 0.0f && h <= 8.0f) || (h >= 352.0f && h <= 360.0f));
             // Checks if hue corresponds to red color range 
-            int isSaturated = (s > 0.3f);
+            int isSaturated = (s > 0.6f);
             // Checks if saturation is enough to be a strong color
-            int isBright = (v > 0.3f);
+            int isBright = (v > 0.4f);
             // Checks if brightness is bright enough
 
             if (isRedHue && isSaturated && isBright) {

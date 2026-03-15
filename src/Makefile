@@ -1,8 +1,10 @@
+OPENCV_FLAGS = $(shell pkg-config --cflags --libs opencv4)
+
 project: main.o timing.o kernels.o cpu_kernels.o
-	nvcc -arch=sm_86 -o project main.o timing.o kernels.o cpu_kernels.o -I.
+	nvcc -arch=sm_86 -o project main.o timing.o kernels.o cpu_kernels.o -I. $(OPENCV_FLAGS)
 
 main.o: main.cu
-	nvcc -arch=sm_86 -c main.cu
+	nvcc -arch=sm_86 -c main.cu $(OPENCV_FLAGS)
 
 kernels.o: kernels.cu kernels.h
 	nvcc -arch=sm_86 -c kernels.cu

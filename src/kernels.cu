@@ -162,10 +162,10 @@ __global__ void filterRed(float *input_img, unsigned char *output_img, int heigh
         float v = input_img[pixel_index + 2];
 
         // Check if the pixel is red based on hue, saturation, and value thresholds
-        bool isRedHue = (h >= 0.0f && h <= 10.0f) || (h >= 350.0f && h <= 360.0f);
+        bool isRedHue = (h >= 0.0f && h <= 8.0f) || (h >= 352.0f && h <= 360.0f);
 
-        bool isSaturated = s > 0.3f;
-        bool isBright    = v > 0.3f;
+        bool isSaturated = s > 0.6f;
+        bool isBright    = v > 0.4f;
 
         if (isRedHue && isSaturated && isBright) {
             output_img[idy * width + idx] = 255;
