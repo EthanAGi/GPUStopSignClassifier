@@ -18,29 +18,23 @@ __device__ float distance( int p1[], int p2[] )
 
 }
 
-__global__ void drawCircleKernel(unsigned char *pixels, int numRows, int numCols,
-                                 int centerRow, int centerCol, float radius) {
+__global__ void drawCircleKernel(unsigned char *pixels, int numRows, int numCols, int centerRow, int centerCol, float radius) {
 
     int row = threadIdx.y + blockIdx.y * blockDim.y;
     int col = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (row < numRows && col < numCols) {
-        float dist = sqrtf((row - centerRow) * (row - centerRow) +
-                           (col - centerCol) * (col - centerCol));
+        float dist = sqrtf((row - centerRow) * (row - centerRow) + (col - centerCol) * (col - centerCol));
 
-        if (fabsf(dist - radius) <= 0.5f) {
+        if (fabsf(dist - radius) <= 1.5f) {
             int pixel_index = (row * numCols + col) * 3;
 
             // Draw red circle
-            pixels[pixel_index]     = 255; // Red
+            pixels[pixel_index]     = 0;   // Blue
             pixels[pixel_index + 1] = 0;   // Green
-            pixels[pixel_index + 2] = 0;   // Blue
+            pixels[pixel_index + 2] = 255; // Red
         }
     }
-}
-
-__global__ void checkShape(int *values, int *max, int *reg_maxes, int num_regions, int n) {
-    return;
 }
 
 /** RBG to HSV requires converting from the Red, Green, Blue model to Hue, Saturation, and Value.
