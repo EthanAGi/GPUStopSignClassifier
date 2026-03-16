@@ -18,6 +18,60 @@ extern "C" {
     #include "timing.h"
 }
 
+void detectAndDrawOctagon(cv::Mat &cpu_edges, cv::Mat &original_img, unsigned char *device_draw_pixels, int width, int height, dim3 grid, dim3 block, bool gpu) {
+    
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(cpu_edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    int octagon_count = 0;
+
+    for (auto& contour : contours) {
+
+        if (cv::contourArea(contour) < 1000) continue;
+
+        std::vector<cv::Point> approx;
+        cv::approxPolyDP(contour, approx, 0.02 * cv::arcLength(contour, true), true);
+
+        if (approx.size() == 8) {
+
+            octagon_count++;
+
+            cv::Point2f center;
+            float radius;
+            cv::minEnclosingCircle(contour, center, radius);
+
+            int centerRow = (int)center.y;
+            int centerCol = (int)center.x;
+            radius += 20;
+
+            printf("\nStop sign detected! Center: (%d, %d) Radius: %.1f\n",
+                   centerCol, centerRow, radius);
+
+            if (gpu) {
+
+                drawCircleKernel<<<grid, block>>>(device_draw_pixels, height, width, centerRow, centerCol, radius);
+                cudaDeviceSynchronize();
+
+            } else {
+
+                drawCircleCPU(original_img.data, height, width, centerRow, centerCol, radius);
+
+            }
+
+        }
+
+    }
+
+    if (gpu) {
+        cudaMemcpy(original_img.data, device_draw_pixels, width * height * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    }
+
+    if (octagon_count == 0) {
+        printf("No stop sign detected.\n");
+    }
+
+}
+
 int main(int argc, char** argv ) {
 
     if (argc != 2)
@@ -29,7 +83,7 @@ int main(int argc, char** argv ) {
     double now, then;
     double scost, pcost;
 
-    double kernel_now, kernel_then;
+    double kernel_then;
     double gpu_kernel_time;
 
     char *input_image_path = argv[1];
@@ -45,7 +99,10 @@ int main(int argc, char** argv ) {
         return 1;
     }
 
-    printf("Width: %d Height: %d\n", width, height);
+    dim3 block(32, 32);
+    dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
+
+    printf("Width: %d Height: %d\n\n", width, height);
 
     // ---------------- CPU PIPELINE ----------------
     float *cpu_hsv_pixels = (float*)malloc(width * height * 3 * sizeof(float));
@@ -70,11 +127,22 @@ int main(int argc, char** argv ) {
     cv::Mat cpu_canny_edges;
     cv::Canny(cpu_smoothed_mat, cpu_canny_edges, 50.0, 150.0);
 
+    // ---------------- CPU OCTAGON DETECTION ----------------
+    cv::Mat cpu_original_rgb(height, width, CV_8UC3, img);
+    cv::Mat cpu_original;
+    cv::cvtColor(cpu_original_rgb, cpu_original, cv::COLOR_RGB2BGR);
+
+    printf("\n-------------------------CPU STOP SIGN DETECTION-------------------------\n");
+
+    detectAndDrawOctagon(cpu_canny_edges, cpu_original, nullptr, width, height, grid, block, false);
+
     now = currentTime();
     scost = (now - then) * 1000.0;
 
     stbi_write_png("cpu_smoothed_output.png", width, height, 1, cpu_smoothed_pixels, width);
     cv::imwrite("cpu_canny_edges_output.png", cpu_canny_edges);
+    cv::imwrite("cpu_detected_output.png", cpu_original);
+    printf("Detection result written to cpu_detected_output.png\n\n");
     printf("Images written to cpu_smoothed_output.png and cpu_canny_edges_output.png\n");
 
     // ---------------- GPU PIPELINE ----------------
@@ -94,9 +162,6 @@ int main(int argc, char** argv ) {
     cudaMalloc(&device_smoothed_pixels, width * height * sizeof(unsigned char));
 
     cudaMemcpy(device_rgb_pixels, img, charByteSize, cudaMemcpyHostToDevice);
-
-    dim3 block(32, 32);
-    dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
     //Timing for only kernel execution
     kernel_then = currentTime();
@@ -119,88 +184,45 @@ int main(int argc, char** argv ) {
 
     auto canny = cv::cuda::createCannyEdgeDetector(50.0, 150.0);
     canny->detect(gpu_smoothed, gpu_edges);
-
-    kernel_now = currentTime();
-    gpu_kernel_time = ((kernel_now - kernel_then) * 1000.0);
     
     //Download edges and saves them
     cv::Mat cpu_edges;
     gpu_edges.download(cpu_edges);
 
-    // ---------------- OCTAGON DETECTION ----------------
-
-    // Load original image into OpenCV so we can draw on it. From BGR to RGB
+    // ---------------- GPU OCTAGON DETECTION ----------------
     cv::Mat original_img_rgb(height, width, CV_8UC3, img);
     cv::Mat original_img;
     cv::cvtColor(original_img_rgb, original_img, cv::COLOR_RGB2BGR);
 
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(cpu_edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    int octagon_count = 0;
-
-    // Allocate device buffer once outside the loop
     unsigned char *device_draw_pixels = nullptr;
     cudaMalloc((void**)&device_draw_pixels, width * height * 3 * sizeof(unsigned char));
     cudaMemcpy(device_draw_pixels, original_img.data, width * height * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
-    for (auto& contour : contours) {
+    printf("\n\n-------------------------GPU STOP SIGN DETECTION-------------------------\n");
 
-        if (cv::contourArea(contour) < 1000) continue;
+    detectAndDrawOctagon(cpu_edges, original_img, device_draw_pixels, width, height, grid, block, true);
 
-        std::vector<cv::Point> approx;
-        cv::approxPolyDP(contour, approx, 0.02 * cv::arcLength(contour, true), true);
-
-        if (approx.size() == 8) {
-
-            octagon_count++;
-
-            cv::Point2f center;
-            float radius;
-            cv::minEnclosingCircle(contour, center, radius);
-
-            int centerRow = (int)center.y;
-            int centerCol = (int)center.x;
-
-            //Extra Clearance for the circle
-            radius += 20;
-
-            printf("\nStop sign detected! Center: (%d, %d) Radius: %.1f\n", centerCol, centerRow, radius);
-
-            // Draw circle on the device buffer — no re-upload needed
-            drawCircleKernel<<<grid, block>>>(device_draw_pixels, height, width, centerRow, centerCol, radius);
-            cudaDeviceSynchronize();
-
-        }
-    }
-
-    // Single download after all circles are drawn
-    cudaMemcpy(original_img.data, device_draw_pixels, width * height * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
-
-    cudaFree(device_draw_pixels);
-
-    if (octagon_count == 0) {
-        printf("No stop sign detected.\n");
-    }
+    now = currentTime();
+    pcost = (now - then) * 1000.0;
+    gpu_kernel_time = (now - kernel_then) * 1000.0;
 
     cv::imwrite("gpu_detected_output.png", original_img);
     printf("Detection result written to gpu_detected_output.png\n\n");
 
+    cudaFree(device_draw_pixels);
 
     unsigned char *smoothed_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     cudaMemcpy(smoothed_pixels, device_smoothed_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
-    now = currentTime();
-    pcost = (now - then) * 1000.0;
-
     cv::imwrite("gpu_canny_edges_output.png", cpu_edges);
     stbi_write_png("gpu_smoothed_output.png", width, height, 1, smoothed_pixels, width);
-    printf("Images written to gpu_smoothed_output.png and canny_edges_output.png\n\n");
+    printf("Images written to gpu_smoothed_output.png and gpu_canny_edges_output.png\n\n");
 
+    printf("\n-------------------------TIMING OUTPUTS-------------------------\n");
     printf("CPU Time taken: %f ms\n", scost);
     printf("GPU Time taken: %f ms\n", pcost);
     if (scost > 0.0) {
-        printf("Speedup: %.2fx\n\n", scost / pcost);
+        printf("Speedup: %.3fx\n\n", scost / pcost);
     }
 
     printf("ONLY GPU Kernel execution time: %f ms\n", gpu_kernel_time);

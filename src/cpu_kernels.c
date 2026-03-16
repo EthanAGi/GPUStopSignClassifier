@@ -109,11 +109,11 @@ void filterRedCPU(float *input_img, unsigned char *output_img, int height, int w
             float v = input_img[pixel_index + 2];
             // Read HSV of current panel.
 
-            int isRedHue = ((h >= 0.0f && h <= 8.0f) || (h >= 352.0f && h <= 360.0f));
+            int isRedHue = ((h >= 0.0f && h <= 8.0f) || (h >= 348.0f && h <= 360.0f));
             // Checks if hue corresponds to red color range 
-            int isSaturated = (s > 0.6f);
+            int isSaturated = (s > 0.5f);
             // Checks if saturation is enough to be a strong color
-            int isBright = (v > 0.4f);
+            int isBright = (v > 0.4f && v < 1.0f);
             // Checks if brightness is bright enough
 
             if (isRedHue && isSaturated && isBright) {
@@ -162,70 +162,24 @@ void gaussianSmoothCPU(unsigned char *input_img, unsigned char *output_img, int 
     }
 }
 
-//Implement the OCTAGON DETECTION
+void drawCircleCPU(unsigned char *pixels, int numRows, int numCols, int centerRow, int centerCol, float radius) {
 
-/*
+    // Loop over every pixel — simulates all threads running in parallel
+    for (int row = 0; row < numRows; row++) {
+        for (int col = 0; col < numCols; col++) {
 
-// ---------------- OCTAGON DETECTION ----------------
+            // Same distance calculation as the kernel
+            float dist = sqrtf((float)((row - centerRow) * (row - centerRow) + (col - centerCol) * (col - centerCol)));
 
-    // Load original image into OpenCV so we can draw on it. From BGR to RGB
-    cv::Mat original_img_rgb(height, width, CV_8UC3, img);
-    cv::Mat original_img;
-    cv::cvtColor(original_img_rgb, original_img, cv::COLOR_RGB2BGR);
+            // Same threshold check as the kernel
+            if (fabsf(dist - radius) <= 2.0f) {
+                int pixel_index = (row * numCols + col) * 3;
 
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(cpu_edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    int octagon_count = 0;
-
-    // Allocate device buffer once outside the loop
-    unsigned char *device_draw_pixels = nullptr;
-    cudaMalloc((void**)&device_draw_pixels, width * height * 3 * sizeof(unsigned char));
-    cudaMemcpy(device_draw_pixels, original_img.data, width * height * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-
-    for (auto& contour : contours) {
-
-        if (cv::contourArea(contour) < 1000) continue;
-
-        std::vector<cv::Point> approx;
-        cv::approxPolyDP(contour, approx, 0.02 * cv::arcLength(contour, true), true);
-
-        if (approx.size() == 8) {
-
-            octagon_count++;
-
-            cv::Point2f center;
-            float radius;
-            cv::minEnclosingCircle(contour, center, radius);
-
-            int centerRow = (int)center.y;
-            int centerCol = (int)center.x;
-
-            //Extra Clearance for the circle
-            radius += 20;
-
-            printf("\nStop sign detected! Center: (%d, %d) Radius: %.1f\n", centerCol, centerRow, radius);
-
-            // Draw circle on the device buffer — no re-upload needed
-            drawCircleKernel<<<grid, block>>>(device_draw_pixels, height, width, centerRow, centerCol, radius);
-            cudaDeviceSynchronize();
-
+                // BGR order to match OpenCV
+                pixels[pixel_index]     = 0;   // Blue
+                pixels[pixel_index + 1] = 0;   // Green
+                pixels[pixel_index + 2] = 255; // Red
+            }
         }
     }
-
-    // Single download after all circles are drawn
-    cudaMemcpy(original_img.data, device_draw_pixels, width * height * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
-
-    cudaFree(device_draw_pixels);
-
-    if (octagon_count == 0) {
-        printf("No stop sign detected.\n");
-    }
-
-    cv::imwrite("gpu_detected_output.png", original_img);
-    printf("Detection result written to gpu_detected_output.png\n\n");
-
 }
-
-
-*/

@@ -26,7 +26,7 @@ __global__ void drawCircleKernel(unsigned char *pixels, int numRows, int numCols
     if (row < numRows && col < numCols) {
         float dist = sqrtf((row - centerRow) * (row - centerRow) + (col - centerCol) * (col - centerCol));
 
-        if (fabsf(dist - radius) <= 1.5f) {
+        if (fabsf(dist - radius) <= 2.0f) {
             int pixel_index = (row * numCols + col) * 3;
 
             // Draw red circle
