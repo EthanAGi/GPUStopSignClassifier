@@ -18,6 +18,13 @@ extern "C" {
     #include "timing.h"
 }
 
+/**
+ * A function that detects octagons in an image and draws circles around them. It uses OpenCV to find contours and approximate them to polygons. 
+ * If a polygon has 8 vertices, it is considered an octagon. The center and radius of the minimum enclosing circle of the contour are calculated, 
+ * and a circle is drawn around the detected octagon. The function can run on either the CPU or GPU based on the 'gpu' boolean parameter. 
+ * If 'gpu' is true, it will use the drawCircleKernel to draw circles on the GPU; otherwise, it will use a CPU implementation. 
+ * The modified image with detected octagons will be saved as output.
+ */
 void detectAndDrawOctagon(cv::Mat &cpu_edges, cv::Mat &original_img, unsigned char *device_draw_pixels, int width, int height, dim3 grid, dim3 block, bool gpu) {
     
     std::vector<std::vector<cv::Point>> contours;
@@ -99,12 +106,17 @@ int main(int argc, char** argv ) {
         return 1;
     }
 
+    // Define block and grid sizes for CUDA kernels
     dim3 block(32, 32);
     dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
     printf("Width: %d Height: %d\n\n", width, height);
 
-    // ---------------- CPU PIPELINE ----------------
+    // ------------------------------------------------------------------------------------------------
+    // ----------------------------------------- CPU PIPELINE -----------------------------------------
+    // ------------------------------------------------------------------------------------------------
+
+    // Allocate memory for intermediate results on the CPU
     float *cpu_hsv_pixels = (float*)malloc(width * height * 3 * sizeof(float));
     unsigned char *cpu_red_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char *cpu_smoothed_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -117,6 +129,7 @@ int main(int argc, char** argv ) {
 
     then = currentTime();
 
+    //Run the CPU methods for RGB to HSV conversion, red color filtering, and Gaussian smoothing
     rgbToHsvCPU(img, cpu_hsv_pixels, height, width);
     filterRedCPU(cpu_hsv_pixels, cpu_red_pixels, height, width);
     gaussianSmoothCPU(cpu_red_pixels, cpu_smoothed_pixels, height, width);
@@ -126,8 +139,10 @@ int main(int argc, char** argv ) {
 
     cv::Mat cpu_canny_edges;
     cv::Canny(cpu_smoothed_mat, cpu_canny_edges, 50.0, 150.0);
+    
+    // ----------------------------------------- CPU OCTAGON DETECTION -----------------------------------------
 
-    // ---------------- CPU OCTAGON DETECTION ----------------
+    //Use OpenCV library to run contour detection and octagon approximation
     cv::Mat cpu_original_rgb(height, width, CV_8UC3, img);
     cv::Mat cpu_original;
     cv::cvtColor(cpu_original_rgb, cpu_original, cv::COLOR_RGB2BGR);
@@ -145,27 +160,35 @@ int main(int argc, char** argv ) {
     printf("Detection result written to cpu_detected_output.png\n\n");
     printf("Images written to cpu_smoothed_output.png and cpu_canny_edges_output.png\n");
 
-    // ---------------- GPU PIPELINE ----------------
+    // ------------------------------------------------------------------------------------------------
+    // ----------------------------------------- GPU PIPELINE -----------------------------------------
+    // ------------------------------------------------------------------------------------------------
+
     then = currentTime();
 
+    // Allocate memory for intermediate results on the GPU
     unsigned char *device_rgb_pixels;
     float *device_hsv_pixels;
     unsigned char *device_output_pixels;
     unsigned char *device_smoothed_pixels;
 
+    // Calculate byte sizes for memory allocation
     int charByteSize = width * height * sizeof(unsigned char) * 3;
     int floatByteSize = width * height * sizeof(float) * 3;
 
+    //Allocate memory on the GPU for the RGB pixels, HSV pixels, output pixels after red filtering, and smoothed pixels after Gaussian smoothing
     cudaMalloc(&device_rgb_pixels, charByteSize);
     cudaMalloc(&device_hsv_pixels, floatByteSize);
     cudaMalloc(&device_output_pixels, width * height * sizeof(unsigned char));
     cudaMalloc(&device_smoothed_pixels, width * height * sizeof(unsigned char));
 
+    //Copy the RGB pixel data from the host (CPU) to the device (GPU)
     cudaMemcpy(device_rgb_pixels, img, charByteSize, cudaMemcpyHostToDevice);
 
     //Timing for only kernel execution
     kernel_then = currentTime();
 
+    //Run the GPU kernels for RGB to HSV conversion, red color filtering, and Gaussian smoothing
     rgbToHsvKernel<<<grid, block>>>(device_rgb_pixels, device_hsv_pixels, height, width);
     cudaDeviceSynchronize();
 
@@ -175,13 +198,16 @@ int main(int argc, char** argv ) {
     gaussianSmoothKernel<<<grid, block>>>(device_output_pixels, device_smoothed_pixels, height, width);
     cudaDeviceSynchronize();
 
+    //Use OpenCV library to run Canny Edge Detection on the GPU
     cv::Mat cpu_smoothed_temp(height, width, CV_8UC1);
     cudaMemcpy(cpu_smoothed_temp.data, device_smoothed_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
+    //Upload the smoothed image to the GPU
     cv::cuda::GpuMat gpu_smoothed;
     gpu_smoothed.upload(cpu_smoothed_temp);
     cv::cuda::GpuMat gpu_edges;
 
+    //Run Canny Edge Detection on the GPU using OpenCV's CUDA module
     auto canny = cv::cuda::createCannyEdgeDetector(50.0, 150.0);
     canny->detect(gpu_smoothed, gpu_edges);
     
@@ -189,11 +215,14 @@ int main(int argc, char** argv ) {
     cv::Mat cpu_edges;
     gpu_edges.download(cpu_edges);
 
-    // ---------------- GPU OCTAGON DETECTION ----------------
+    // ----------------------------------------- GPU OCTAGON DETECTION -----------------------------------------
+
+    //Use OpenCV library to run contour detection and octagon approximation on the GPU
     cv::Mat original_img_rgb(height, width, CV_8UC3, img);
     cv::Mat original_img;
     cv::cvtColor(original_img_rgb, original_img, cv::COLOR_RGB2BGR);
 
+    //Allocate memory on the GPU for drawing the detected octagons
     unsigned char *device_draw_pixels = nullptr;
     cudaMalloc((void**)&device_draw_pixels, width * height * 3 * sizeof(unsigned char));
     cudaMemcpy(device_draw_pixels, original_img.data, width * height * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
@@ -206,11 +235,13 @@ int main(int argc, char** argv ) {
     pcost = (now - then) * 1000.0;
     gpu_kernel_time = (now - kernel_then) * 1000.0;
 
+    //Copy the modified image with detected octagons back to the host and save it
     cv::imwrite("gpu_detected_output.png", original_img);
     printf("Detection result written to gpu_detected_output.png\n\n");
 
     cudaFree(device_draw_pixels);
 
+    //Copy the smoothed image and edges back to the host and save them
     unsigned char *smoothed_pixels = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     cudaMemcpy(smoothed_pixels, device_smoothed_pixels, width * height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 

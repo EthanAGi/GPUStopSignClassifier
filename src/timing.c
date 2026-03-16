@@ -1,8 +1,5 @@
 /*
- *  timing.c
- * 
- *
- *
+ *  Imported from Tony Tian's CSCD445-040 2027
  */
 
 

@@ -12,12 +12,20 @@ __constant__ float gaussianKernel[GAUSSIAN_KERNEL_SIZE][GAUSSIAN_KERNEL_SIZE] = 
 
 #define GAUSSIAN_NORM 16.0f
 
+
+//Calculate the distance between two points in 2D space. This will be used to determine if a pixel is within a certain distance from the circle's circumference when drawing the circle.
 __device__ float distance( int p1[], int p2[] )
 {
     return sqrtf( (float)( (p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]) ) );
 
 }
 
+/**
+ * A kernel that draws a circle on an image given the center coordinates and radius. Each thread will map to a pixel in 
+ * the image and check if it is within a certain distance from the circle's circumference. If it is, the pixel will be colored red. 
+ * The input is a pointer to the pixel data of the image, the dimensions of the image, and the center coordinates and 
+ * radius of the circle. The output will be the modified pixel data with the circle drawn on it.
+ */
 __global__ void drawCircleKernel(unsigned char *pixels, int numRows, int numCols, int centerRow, int centerCol, float radius) {
 
     int row = threadIdx.y + blockIdx.y * blockDim.y;
