@@ -4,6 +4,9 @@
 
 Our project will be fed an image and will detect if a stop sign is present. If a stop sign is detected, the output will be “Found”, otherwise “Not Found”. It will search for the stop sign and will modify the image by highlighting the location of the stop sign. We will be running parallel image processing kernels on the GPU to implement this. A CPU sequential solution will also be included in the project to demonstrate the speed differences of utilizing parallel computing as opposed to sequential programming. The program will look for common stop sign features like red color and octagonal shapes to determine if the stop sign is present.
 
+**Project Report:**
+https://docs.google.com/document/d/1-66TOopt5iPI4L7EljMpx3-c8KsVTwz5-ei495qnTxU/edit?usp=sharing
+
 ---
 
 ## Functionalities Implementation:
